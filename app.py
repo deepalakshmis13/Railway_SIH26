@@ -1853,108 +1853,47 @@ def display_full_plan(
     # Display Each Block
     # --------------------------------------------------------
 
-    for block in plan:
+        for block in plan:
 
         start_time = minutes_to_time(
-
             block["start_time"]
-
         )
 
         end_time = minutes_to_time(
-
             block["end_time"]
-
         )
 
-        status = block.get(
-
-            "status",
-
-            "SCHEDULED"
-
-        )
-
-        plan_date = block.get(
-
-            "plan_date",
-
-            "Not Assigned"
-
-        )
-
-
-        with st.container(
-            border=True
-        ):
+        with st.container(border=True):
 
             st.markdown(
-
-                f"### 🚧 "
-                f"{block.get('block_id', 'BLOCK')}"
-
+                f"### 🚧 {block['block_id']}"
             )
 
-
-            col1, col2, col3, col4 = (
-                st.columns(4)
-            )
-
+            col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-
-                st.write(
-                    "**Date**"
-                )
-
-                st.write(
-                    plan_date
-                )
-
+                st.write("**Date**")
+                st.write(block.get("plan_date", "Not Assigned"))
 
             with col2:
-
+                st.write("**Corridor**")
                 st.write(
-                    "**Corridor**"
+                    f"KM {block['start_km']} → {block['end_km']}"
                 )
-
-                st.write(
-
-                    f"KM "
-                    f"{block['start_km']} "
-                    f"→ "
-                    f"{block['end_km']}"
-
-                )
-
 
             with col3:
-
+                st.write("**Time**")
                 st.write(
-                    "**Time**"
+                    f"{start_time} → {end_time}"
                 )
-
-                st.write(
-
-                    f"{start_time} "
-                    f"→ "
-                    f"{end_time}"
-
-                )
-
 
             with col4:
-
+                st.write("**Status**")
                 st.write(
-                    "**Status**"
+                    block.get("status", "SCHEDULED")
                 )
 
-                st.write(
-                    status
-                )
-
-
-                       st.write(
+            st.write(
                 f"**Departments:** {', '.join(block.get('departments', []))}"
             )
 
@@ -1983,8 +1922,7 @@ def display_full_plan(
 
                 st.write(
                     f"**Weather Impact:** "
-                    f"{block['weather_multiplier']:.2f}x "
-                    f"duration"
+                    f"{block['weather_multiplier']:.2f}x duration"
                 )
 
             if "simulated_delay" in block:
@@ -2001,15 +1939,11 @@ def display_full_plan(
             for task in block["tasks"]:
 
                 st.write(
-                    f"• "
-                    f"**{task['department_name']}** — "
+                    f"• **{task['department_name']}** — "
                     f"{task['title']} | "
-                    f"Priority: "
-                    f"{task['priority']} | "
-                    f"Duration: "
-                    f"{task['duration_minutes']} min"
+                    f"Priority: {task['priority']} | "
+                    f"Duration: {task['duration_minutes']} min"
                 )
-
 # ============================================================
 # PLAN DOWNLOAD
 # ============================================================
