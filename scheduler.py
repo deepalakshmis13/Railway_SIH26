@@ -222,33 +222,56 @@ def task_can_join_group(candidate, group):
 
     first_task = group[0]
 
-    # Same subdivision required.
+    # Task must be in the same subdivision.
     if (
         candidate["subdivision_id"]
         != first_task["subdivision_id"]
     ):
         return False
 
-    # Both must require a block.
+    # Both tasks must require a railway block.
     if not candidate["requires_block"]:
         return False
 
-    # Important:
-    # Only group tasks with the same due date.
-    if candidate["due_date"] != first_task["due_date"]:
-        return False
-
+    # Check whether the candidate overlaps with
+    # the current combined block location.
     block_start, block_end = calculate_block_location(
         group
     )
 
-    return ranges_overlap(
+    if not ranges_overlap(
         block_start,
         block_end,
         candidate["location_start_km"],
         candidate["location_end_km"]
-    )
+    ):
+        return False
 
+    # Avoid grouping tasks that are too far apart
+    # in terms of due date.
+    group_due_date = get_group_due_date(group)
+
+    if group_due_date and candidate["due_date"]:
+
+        group_date = datetime.strptime(
+            group_due_date,
+            "%Y-%m-%d"
+        ).date()
+
+        candidate_date = datetime.strptime(
+            candidate["due_date"],
+            "%Y-%m-%d"
+        ).date()
+
+        date_difference = abs(
+            (candidate_date - group_date).days
+        )
+
+        # Tasks within 2 days can share a block.
+        if date_difference > 2:
+            return False
+
+    return True
 def build_task_groups(tasks):
 
     """
