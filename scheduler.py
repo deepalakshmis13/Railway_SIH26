@@ -1744,12 +1744,138 @@ def get_plan_summary(plan):
         "unscheduled_blocks":
             unscheduled_blocks
     }
+# ============================================================
+# BUNDLING / OPTIMIZATION METRICS
+# ============================================================
+
+def get_bundling_metrics(plan):
+
+    """
+    Calculates the impact of bundling multiple
+    departmental tasks into shared maintenance blocks.
+    """
+
+    if not plan:
+
+        return {
+
+            "total_tasks": 0,
+
+            "optimized_blocks": 0,
+
+            "traditional_blocks": 0,
+
+            "blocks_saved": 0,
+
+            "block_reduction_percent": 0,
+
+            "average_tasks_per_block": 0,
+
+            "multi_department_blocks": 0
+        }
+
+
+    total_tasks = sum(
+
+        len(block["tasks"])
+
+        for block in plan
+    )
+
+
+    optimized_blocks = len(plan)
+
+
+    # Traditional system assumption:
+    # each task requiring a block would need
+    # its own separate possession/block.
+
+    traditional_blocks = total_tasks
+
+
+    blocks_saved = (
+
+        traditional_blocks
+        - optimized_blocks
+    )
+
+
+    if traditional_blocks > 0:
+
+        block_reduction_percent = (
+
+            blocks_saved
+            / traditional_blocks
+        ) * 100
+
+    else:
+
+        block_reduction_percent = 0
+
+
+    average_tasks_per_block = (
+
+        total_tasks
+        / optimized_blocks
+
+        if optimized_blocks > 0
+
+        else 0
+    )
+
+
+    multi_department_blocks = 0
+
+
+    for block in plan:
+
+        departments = {
+
+            task["department_name"]
+
+            for task in block["tasks"]
+        }
+
+
+        if len(departments) > 1:
+
+            multi_department_blocks += 1
+
+
+    return {
+
+        "total_tasks":
+            total_tasks,
+
+        "optimized_blocks":
+            optimized_blocks,
+
+        "traditional_blocks":
+            traditional_blocks,
+
+        "blocks_saved":
+            blocks_saved,
+
+        "block_reduction_percent":
+            round(
+                block_reduction_percent,
+                2
+            ),
+
+        "average_tasks_per_block":
+            round(
+                average_tasks_per_block,
+                2
+            ),
+
+        "multi_department_blocks":
+            multi_department_blocks
+    }
 
 
 # ============================================================
 # DASHBOARD HELPER
 # ============================================================
-
 def get_schedule_summary():
 
     """
