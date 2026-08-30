@@ -546,3 +546,10 @@ if __name__ == "__main__":
     schedule = generate_schedule()
 
     display_schedule(schedule)
+generate_full_plan("weekly")
+generate_full_plan("monthly")
+
+generate_what_if_plan(
+    delay_minutes=30,
+    weather_condition="Heavy Rain"
+)
