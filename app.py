@@ -12,7 +12,8 @@ from scheduler import (
     update_train_delay,
     minutes_to_time,
     generate_full_plan,
-    generate_what_if_plan
+    generate_what_if_plan,
+    get_plan_summary
 )
 
 
@@ -1605,6 +1606,262 @@ def show_schedule():
                     f"{task['duration_minutes']} min"
 
                 )
+# ============================================================
+# FULL PLAN DISPLAY
+# Weekly / Monthly Plan A
+# ============================================================
+
+def display_full_plan(plan, plan_title="Optimized Plan"):
+
+    st.subheader(f"📅 {plan_title}")
+
+    if not plan:
+
+        st.warning(
+            "No maintenance blocks could be scheduled."
+        )
+
+        return
+
+    summary = get_plan_summary(plan)
+
+    # --------------------------------------------------------
+    # Plan Metrics
+    # --------------------------------------------------------
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+
+        st.metric(
+            "Total Blocks",
+            summary["total_blocks"]
+        )
+
+    with col2:
+
+        st.metric(
+            "Total Tasks",
+            summary["total_tasks"]
+        )
+
+    with col3:
+
+        st.metric(
+            "Total Block Time",
+            f"{summary['total_block_minutes']} min"
+        )
+
+    with col4:
+
+        st.metric(
+            "Avg. Optimization Score",
+            f"{summary['average_score']:.1f}"
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # Display Each Block
+    # --------------------------------------------------------
+
+    for block in plan:
+
+        start_time = minutes_to_time(
+            block["start_time"]
+        )
+
+        end_time = minutes_to_time(
+            block["end_time"]
+        )
+
+        status = block.get(
+            "status",
+            "SCHEDULED"
+        )
+
+        plan_date = block.get(
+            "plan_date",
+            "Not Assigned"
+        )
+
+        with st.container(border=True):
+
+            st.markdown(
+                f"### 🚧 {block['block_id']}"
+            )
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+
+                st.write(
+                    "**Date**"
+                )
+
+                st.write(
+                    plan_date
+                )
+
+            with col2:
+
+                st.write(
+                    "**Corridor**"
+                )
+
+                st.write(
+                    f"KM {block['start_km']} "
+                    f"→ {block['end_km']}"
+                )
+
+            with col3:
+
+                st.write(
+                    "**Time**"
+                )
+
+                st.write(
+                    f"{start_time} "
+                    f"→ {end_time}"
+                )
+
+            with col4:
+
+                st.write(
+                    "**Status**"
+                )
+
+                st.write(
+                    status
+                )
+
+            st.write(
+                f"**Departments:** "
+                f"{', '.join(block['departments'])}"
+            )
+
+            st.write(
+                f"**Tasks:** "
+                f"{block['task_count']}"
+            )
+
+            st.write(
+                f"**Total Priority:** "
+                f"{block['total_priority']}"
+            )
+
+            st.write(
+                f"**Optimization Score:** "
+                f"{block['score']:.2f}"
+            )
+
+            st.markdown(
+                "#### 🔧 Maintenance Activities"
+            )
+
+            for task in block["tasks"]:
+
+                st.write(
+
+                    f"• **{task['department_name']}** — "
+                    f"{task['title']} | "
+                    f"Priority: {task['priority']} | "
+                    f"Duration: "
+                    f"{task['duration_minutes']} min"
+
+                )
+
+
+# ============================================================
+# PLAN DOWNLOAD
+# ============================================================
+
+def convert_plan_to_csv(plan):
+
+    import csv
+    import io
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Block ID",
+        "Plan Date",
+        "Start Time",
+        "End Time",
+        "Start KM",
+        "End KM",
+        "Departments",
+        "Task Count",
+        "Total Priority",
+        "Duration Minutes",
+        "Optimization Score",
+        "Status"
+    ])
+
+    for block in plan:
+
+        writer.writerow([
+
+            block.get(
+                "block_id",
+                ""
+            ),
+
+            block.get(
+                "plan_date",
+                ""
+            ),
+
+            minutes_to_time(
+                block["start_time"]
+            ),
+
+            minutes_to_time(
+                block["end_time"]
+            ),
+
+            block["start_km"],
+
+            block["end_km"],
+
+            ", ".join(
+                block.get(
+                    "departments",
+                    []
+                )
+            ),
+
+            block.get(
+                "task_count",
+                len(block["tasks"])
+            ),
+
+            block.get(
+                "total_priority",
+                0
+            ),
+
+            block.get(
+                "duration_minutes",
+                block["end_time"]
+                - block["start_time"]
+            ),
+
+            round(
+                block["score"],
+                2
+            ),
+
+            block.get(
+                "status",
+                "SCHEDULED"
+            )
+
+        ])
+
+    return output.getvalue()
 
 
 # ============================================================
