@@ -217,45 +217,37 @@ def find_compatible_tasks(tasks):
 
 def task_can_join_group(candidate, group):
 
-    """
-    Ensures that a candidate task is compatible with
-    the existing maintenance block.
-
-    The candidate must overlap with the block area and
-    belong to the same subdivision.
-    """
-
     if not group:
-
         return True
-
 
     first_task = group[0]
 
-    if candidate["subdivision_id"] != first_task["subdivision_id"]:
-
+    # Same subdivision required.
+    if (
+        candidate["subdivision_id"]
+        != first_task["subdivision_id"]
+    ):
         return False
 
-
+    # Both must require a block.
     if not candidate["requires_block"]:
-
         return False
 
+    # Important:
+    # Only group tasks with the same due date.
+    if candidate["due_date"] != first_task["due_date"]:
+        return False
 
-    block_start, block_end = calculate_block_location(group)
-
-    candidate_start = candidate["location_start_km"]
-    candidate_end = candidate["location_end_km"]
-
-    return ranges_overlap(
-
-        block_start,
-        block_end,
-
-        candidate_start,
-        candidate_end
+    block_start, block_end = calculate_block_location(
+        group
     )
 
+    return ranges_overlap(
+        block_start,
+        block_end,
+        candidate["location_start_km"],
+        candidate["location_end_km"]
+    )
 
 def build_task_groups(tasks):
 
