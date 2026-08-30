@@ -353,6 +353,23 @@ def calculate_priority_score(task_group):
         for task in task_group
     )
 
+def get_group_due_date(task_group):
+
+    due_dates = [
+
+        task["due_date"]
+
+        for task in task_group
+
+        if task["due_date"]
+    ]
+
+    if not due_dates:
+
+        return None
+
+    return min(due_dates)
+
 
 # ============================================================
 # TIME UTILITIES
