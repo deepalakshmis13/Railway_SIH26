@@ -1185,7 +1185,6 @@ def assign_blocks_to_days(
 
     return final_plan
 
-
 def add_plan_metadata(plan):
 
     """
