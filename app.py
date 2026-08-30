@@ -1783,36 +1783,25 @@ def show_schedule():
 # Weekly / Monthly Plan A
 # ============================================================
 
-def display_full_plan(
-    plan,
-    plan_title="Optimized Plan"
-):
+def display_full_plan(plan, plan_title="Optimized Plan"):
 
-    st.subheader(
-        f"📅 {plan_title}"
-    )
+    st.subheader(f"📅 {plan_title}")
 
     if not plan:
 
         st.warning(
-            "No maintenance blocks could "
-            "be scheduled."
+            "No maintenance blocks could be scheduled."
         )
 
         return
 
-
     summary = get_plan_summary(plan)
-
 
     # --------------------------------------------------------
     # Plan Metrics
     # --------------------------------------------------------
 
-    col1, col2, col3, col4 = (
-        st.columns(4)
-    )
-
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
 
@@ -1821,14 +1810,12 @@ def display_full_plan(
             summary["total_blocks"]
         )
 
-
     with col2:
 
         st.metric(
             "Total Tasks",
             summary["total_tasks"]
         )
-
 
     with col3:
 
@@ -1837,7 +1824,6 @@ def display_full_plan(
             f"{summary['total_block_minutes']} min"
         )
 
-
     with col4:
 
         st.metric(
@@ -1845,15 +1831,13 @@ def display_full_plan(
             f"{summary['average_score']:.1f}"
         )
 
-
     st.divider()
-
 
     # --------------------------------------------------------
     # Display Each Block
     # --------------------------------------------------------
 
-        for block in plan:
+    for block in plan:
 
         start_time = minutes_to_time(
             block["start_time"]
@@ -1863,53 +1847,80 @@ def display_full_plan(
             block["end_time"]
         )
 
+        status = block.get(
+            "status",
+            "SCHEDULED"
+        )
+
+        plan_date = block.get(
+            "plan_date",
+            "Not Assigned"
+        )
+
         with st.container(border=True):
 
             st.markdown(
-                f"### 🚧 {block['block_id']}"
+                f"### 🚧 {block.get('block_id', 'BLOCK')}"
             )
 
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
+
                 st.write("**Date**")
-                st.write(block.get("plan_date", "Not Assigned"))
+
+                st.write(plan_date)
 
             with col2:
+
                 st.write("**Corridor**")
+
                 st.write(
-                    f"KM {block['start_km']} → {block['end_km']}"
+                    f"KM {block['start_km']} "
+                    f"→ {block['end_km']}"
                 )
 
             with col3:
+
                 st.write("**Time**")
+
                 st.write(
                     f"{start_time} → {end_time}"
                 )
 
             with col4:
+
                 st.write("**Status**")
-                st.write(
-                    block.get("status", "SCHEDULED")
-                )
+
+                st.write(status)
+
+            # ------------------------------------------------
+            # Block Information
+            # ------------------------------------------------
 
             st.write(
-                f"**Departments:** {', '.join(block.get('departments', []))}"
+                f"**Departments:** "
+                f"{', '.join(block.get('departments', []))}"
             )
 
             st.write(
-                f"**Tasks:** {block.get('task_count', len(block['tasks']))}"
+                f"**Tasks:** "
+                f"{block.get('task_count', len(block['tasks']))}"
             )
 
             st.write(
-                f"**Total Priority:** {block.get('total_priority', 0)}"
+                f"**Total Priority:** "
+                f"{block.get('total_priority', 0)}"
             )
 
             st.write(
-                f"**Optimization Score:** {block['score']:.2f}"
+                f"**Optimization Score:** "
+                f"{block['score']:.2f}"
             )
 
-            # Plan B simulation information
+            # ------------------------------------------------
+            # Plan B Simulation Information
+            # ------------------------------------------------
 
             if "weather_condition" in block:
 
@@ -1931,6 +1942,10 @@ def display_full_plan(
                     f"**Simulated Train Delay:** "
                     f"{block['simulated_delay']} min"
                 )
+
+            # ------------------------------------------------
+            # Maintenance Activities
+            # ------------------------------------------------
 
             st.markdown(
                 "#### 🔧 Maintenance Activities"
