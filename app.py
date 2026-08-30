@@ -1955,20 +1955,8 @@ def display_full_plan(
 
 
             st.write(
-
-                f"**Departments:** "
-
-                f"{', '.join( "
-
-                f"block.get("
-
-                f"'departments', []"
-
-                f")"
-
-                f")}"
-
-            )
+    f"**Departments:** {', '.join(block.get('departments', []))}"
+)
 
 
             st.write(
