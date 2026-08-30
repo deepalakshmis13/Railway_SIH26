@@ -10,7 +10,9 @@ from scheduler import (
     get_resources,
     generate_schedule,
     update_train_delay,
-    minutes_to_time
+    minutes_to_time,
+    generate_full_plan,
+    generate_what_if_plan
 )
 
 
