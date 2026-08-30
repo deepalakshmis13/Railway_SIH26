@@ -2605,8 +2605,7 @@ def planner_dashboard():
 
                     "Simulated Delay",
 
-                    f"{settings.get("
-                    f"'delay_minutes', 0)} min"
+                   f"{settings.get('delay_minutes', 0)} min"
 
                 )
 
