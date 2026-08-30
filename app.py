@@ -1960,18 +1960,8 @@ def display_full_plan(
 
 
             st.write(
-
-                f"**Tasks:** "
-
-                f"{block.get("
-
-                f"'task_count', "
-
-                f"len(block['tasks'])"
-
-                f")}"
-
-            )
+    f"**Something:** {block.get('some_key', '')}"
+)
 
 
             st.write(
