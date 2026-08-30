@@ -1954,82 +1954,61 @@ def display_full_plan(
                 )
 
 
-           st.write(
-    f"**Departments:** {', '.join(block.get('departments', []))}"
-    )
+                       st.write(
+                f"**Departments:** {', '.join(block.get('departments', []))}"
+            )
 
-           st.write(
-    f"**Tasks:** {block.get('task_count', len(block['tasks']))}"
-    )
+            st.write(
+                f"**Tasks:** {block.get('task_count', len(block['tasks']))}"
+            )
 
-           st.write(
-    f"**Total Priority:** {block.get('total_priority', 0)}"
-    )
+            st.write(
+                f"**Total Priority:** {block.get('total_priority', 0)}"
+            )
 
-           st.write(
-    f"**Optimization Score:** {block['score']:.2f}"
-    )
+            st.write(
+                f"**Optimization Score:** {block['score']:.2f}"
+            )
 
             # Plan B simulation information
 
             if "weather_condition" in block:
 
                 st.write(
-
                     f"**Weather Condition:** "
-
                     f"{block['weather_condition']}"
-
                 )
-
 
             if "weather_multiplier" in block:
 
                 st.write(
-
                     f"**Weather Impact:** "
-
                     f"{block['weather_multiplier']:.2f}x "
-
                     f"duration"
-
                 )
-
 
             if "simulated_delay" in block:
 
                 st.write(
-
                     f"**Simulated Train Delay:** "
-
                     f"{block['simulated_delay']} min"
-
                 )
-
 
             st.markdown(
                 "#### 🔧 Maintenance Activities"
             )
 
-
             for task in block["tasks"]:
 
                 st.write(
-
                     f"• "
-
                     f"**{task['department_name']}** — "
-
                     f"{task['title']} | "
-
                     f"Priority: "
                     f"{task['priority']} | "
-
                     f"Duration: "
                     f"{task['duration_minutes']} min"
-
                 )
-
 
 # ============================================================
 # PLAN DOWNLOAD
