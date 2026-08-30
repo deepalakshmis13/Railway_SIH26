@@ -1019,43 +1019,33 @@ def assign_blocks_to_days(
 ):
 
     """
-    Distributes maintenance blocks across the planning horizon.
+    Assigns maintenance blocks across the planning horizon.
 
-    Assignment priority:
-
-    1. Schedule blocks according to task due dates.
-    2. High-priority blocks are scheduled earlier.
-    3. Blocks are moved to the next available day
-       if conflicts occur.
+    Blocks are scheduled according to their task due dates
+    instead of placing everything on today's date.
     """
 
     start_date = date.today()
 
     end_date = (
-        start_date +
-        timedelta(days=horizon_days - 1)
+        start_date
+        + timedelta(days=horizon_days - 1)
     )
 
-    # --------------------------------------------------------
-    # Create empty daily schedules
-    # --------------------------------------------------------
+    # Create calendar.
 
     daily_blocks = {}
 
     for day_offset in range(horizon_days):
 
         plan_date = (
-            start_date +
-            timedelta(days=day_offset)
-        )
+            start_date
+            + timedelta(days=day_offset)
+        ).isoformat()
 
-        daily_blocks[
-            plan_date.isoformat()
-        ] = []
+        daily_blocks[plan_date] = []
 
-    # --------------------------------------------------------
-    # Sort blocks
-    # --------------------------------------------------------
+    # Sort by priority.
 
     sorted_schedule = sorted(
 
@@ -1063,138 +1053,122 @@ def assign_blocks_to_days(
 
         key=lambda block: (
 
-            -max(
+            max(
                 task["priority"]
                 for task in block["tasks"]
             ),
 
             block["score"]
-        )
+
+        ),
+
+        reverse=True
     )
 
     final_plan = []
 
 
-    # --------------------------------------------------------
-    # Assign blocks to dates
-    # --------------------------------------------------------
-
     for block in sorted_schedule:
 
         assigned = False
 
+        # Get the preferred date from task due dates.
 
-        # ----------------------------------------------------
-        # Determine preferred date
-        # ----------------------------------------------------
+        due_date_string = get_group_due_date(
+            block["tasks"]
+        )
 
-        due_dates = []
+        if due_date_string:
 
-        for task in block["tasks"]:
+            preferred_date = datetime.strptime(
 
-            due_date = task.get(
-                "due_date"
-            )
+                due_date_string,
+                "%Y-%m-%d"
 
-            if due_date:
+            ).date()
 
-                try:
+        else:
 
-                    parsed_date = datetime.strptime(
-
-                        str(due_date),
-
-                        "%Y-%m-%d"
-
-                    ).date()
-
-                    due_dates.append(
-                        parsed_date
-                    )
-
-                except ValueError:
-
-                    pass
+            preferred_date = start_date
 
 
-        # Default scheduling date is today
-
-        preferred_date = start_date
-
-
-        if due_dates:
-
-            # Use earliest due date in the block
-
-            preferred_date = min(
-                due_dates
-            )
-
-
-        # ----------------------------------------------------
-        # Keep preferred date inside horizon
-        # ----------------------------------------------------
+        # Emergency or overdue work should start today.
 
         if preferred_date < start_date:
 
             preferred_date = start_date
 
 
+        # If task is outside planning horizon,
+        # mark it unscheduled.
+
         if preferred_date > end_date:
 
-            preferred_date = end_date
+            new_block = copy.deepcopy(block)
 
-
-        # ----------------------------------------------------
-        # Try preferred date and following dates
-        # ----------------------------------------------------
-
-        days_to_try = []
-
-        current_date = preferred_date
-
-
-        while current_date <= end_date:
-
-            days_to_try.append(
-                current_date
+            new_block["plan_date"] = (
+                "OUTSIDE HORIZON"
             )
 
-            current_date += timedelta(
-                days=1
+            new_block["block_id"] = (
+
+                f"BLK-{len(final_plan) + 1:03d}"
             )
 
-
-        # If necessary, try earlier dates too
-
-        current_date = start_date
-
-
-        while current_date < preferred_date:
-
-            days_to_try.append(
-                current_date
+            new_block["status"] = (
+                "UNSCHEDULED"
             )
 
-            current_date += timedelta(
-                days=1
+            final_plan.append(new_block)
+
+            continue
+
+
+        # First try the preferred due date,
+        # then following dates.
+
+        candidate_dates = []
+
+        for offset in range(horizon_days):
+
+            candidate_date = (
+                preferred_date
+                + timedelta(days=offset)
             )
 
+            if candidate_date <= end_date:
 
-        # ----------------------------------------------------
-        # Find available date
-        # ----------------------------------------------------
+                candidate_dates.append(
+                    candidate_date
+                )
 
-        for candidate_date in days_to_try:
 
-            plan_date = (
-                candidate_date.isoformat()
+        # If still not possible,
+        # try earlier dates.
+
+        for offset in range(1, horizon_days):
+
+            candidate_date = (
+                preferred_date
+                - timedelta(days=offset)
             )
+
+            if candidate_date >= start_date:
+
+                candidate_dates.append(
+                    candidate_date
+                )
+
+
+        # Find first date without a block conflict.
+
+        for candidate_date in candidate_dates:
+
+            plan_date = candidate_date.isoformat()
 
             existing_blocks = (
                 daily_blocks[plan_date]
             )
-
 
             conflict_found = False
 
@@ -1205,6 +1179,7 @@ def assign_blocks_to_days(
 
                     block,
                     existing_block
+
                 ):
 
                     conflict_found = True
@@ -1214,72 +1189,52 @@ def assign_blocks_to_days(
 
             if not conflict_found:
 
-                new_block = copy.deepcopy(
-                    block
-                )
-
+                new_block = copy.deepcopy(block)
 
                 new_block["plan_date"] = (
                     plan_date
                 )
 
-
                 new_block["block_id"] = (
 
-                    f"BLK-"
-                    f"{len(final_plan) + 1:03d}"
+                    f"BLK-{len(final_plan) + 1:03d}"
                 )
-
 
                 new_block["status"] = (
                     "SCHEDULED"
                 )
 
-
-                daily_blocks[
-                    plan_date
-                ].append(
+                daily_blocks[plan_date].append(
                     new_block
                 )
-
 
                 final_plan.append(
                     new_block
                 )
-
 
                 assigned = True
 
                 break
 
 
-        # ----------------------------------------------------
-        # No available date
-        # ----------------------------------------------------
+        # No possible date.
 
         if not assigned:
 
-            new_block = copy.deepcopy(
-                block
-            )
-
+            new_block = copy.deepcopy(block)
 
             new_block["plan_date"] = (
                 "UNSCHEDULED"
             )
 
-
             new_block["block_id"] = (
 
-                f"BLK-"
-                f"{len(final_plan) + 1:03d}"
+                f"BLK-{len(final_plan) + 1:03d}"
             )
-
 
             new_block["status"] = (
                 "UNSCHEDULED"
             )
-
 
             final_plan.append(
                 new_block
