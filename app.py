@@ -1564,15 +1564,101 @@ def control_office_dashboard():
 
 
 # ============================================================
+# DAILY SCHEDULE CSV
+# ============================================================
+
+def convert_daily_schedule_to_csv(schedule):
+
+    import csv
+    import io
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Schedule Date",
+        "Block ID",
+        "Start Time",
+        "End Time",
+        "Start KM",
+        "End KM",
+        "Department",
+        "Task Title",
+        "Priority",
+        "Task Duration Minutes",
+        "Total Block Tasks",
+        "Optimization Score"
+    ])
+
+    schedule_date = date.today().isoformat()
+
+    for index, block in enumerate(schedule, start=1):
+
+        block_id = f"DAILY-{index:03d}"
+
+        start_time = minutes_to_time(
+            block["start_time"]
+        )
+
+        end_time = minutes_to_time(
+            block["end_time"]
+        )
+
+        task_count = len(
+            block["tasks"]
+        )
+
+        for task in block["tasks"]:
+
+            writer.writerow([
+
+                schedule_date,
+
+                block_id,
+
+                start_time,
+
+                end_time,
+
+                block["start_km"],
+
+                block["end_km"],
+
+                task["department_name"],
+
+                task["title"],
+
+                task["priority"],
+
+                task["duration_minutes"],
+
+                task_count,
+
+                round(
+                    block["score"],
+                    2
+                )
+
+            ])
+
+    return output.getvalue()
+
+
+# ============================================================
 # SCHEDULE DASHBOARD
 # ============================================================
 
 def show_schedule():
 
     st.subheader(
-        "🤖 Automatic Block Plan"
+        "🤖 Automatic Daily Block Plan"
     )
 
+    st.caption(
+        f"Daily maintenance schedule for "
+        f"{date.today().isoformat()}"
+    )
 
     try:
 
@@ -1587,7 +1673,6 @@ def show_schedule():
 
         return
 
-
     if not schedule:
 
         st.warning(
@@ -1596,7 +1681,6 @@ def show_schedule():
         )
 
         return
-
 
     # --------------------------------------------------------
     # Metrics
@@ -1614,16 +1698,15 @@ def show_schedule():
 
     )
 
-
     total_block_minutes = sum(
 
         block["end_time"]
-        - block["start_time"]
+        -
+        block["start_time"]
 
         for block in schedule
 
     )
-
 
     average_score = sum(
 
@@ -1633,11 +1716,9 @@ def show_schedule():
 
     ) / total_blocks
 
-
     col1, col2, col3, col4 = (
         st.columns(4)
     )
-
 
     with col1:
 
@@ -1646,14 +1727,12 @@ def show_schedule():
             total_blocks
         )
 
-
     with col2:
 
         st.metric(
             "Scheduled Tasks",
             total_tasks
         )
-
 
     with col3:
 
@@ -1662,7 +1741,6 @@ def show_schedule():
             f"{total_block_minutes} min"
         )
 
-
     with col4:
 
         st.metric(
@@ -1670,9 +1748,36 @@ def show_schedule():
             f"{average_score:.1f}"
         )
 
-
     st.divider()
 
+    # --------------------------------------------------------
+    # DAILY CSV DOWNLOAD
+    # --------------------------------------------------------
+
+    csv_data = convert_daily_schedule_to_csv(
+        schedule
+    )
+
+    st.download_button(
+
+        label="⬇️ Download Daily Schedule CSV",
+
+        data=csv_data,
+
+        file_name=(
+            f"daily_maintenance_schedule_"
+            f"{date.today().isoformat()}.csv"
+        ),
+
+        mime="text/csv",
+
+        use_container_width=True,
+
+        key="download_daily_schedule"
+
+    )
+
+    st.divider()
 
     # --------------------------------------------------------
     # Blocks
@@ -1698,20 +1803,23 @@ def show_schedule():
 
         )
 
-
         with st.container(
+
             border=True
+
         ):
 
             st.markdown(
-                f"## 🚧 BLOCK #{index}"
-            )
 
+                f"## 🚧 BLOCK #{index}"
+
+            )
 
             col1, col2, col3 = (
-                st.columns(3)
-            )
 
+                st.columns(3)
+
+            )
 
             with col1:
 
@@ -1728,7 +1836,6 @@ def show_schedule():
 
                 )
 
-
             with col2:
 
                 st.write(
@@ -1743,7 +1850,6 @@ def show_schedule():
 
                 )
 
-
             with col3:
 
                 st.write(
@@ -1751,14 +1857,14 @@ def show_schedule():
                 )
 
                 st.write(
-                    f"{block['score']:.2f}"
-                )
 
+                    f"{block['score']:.2f}"
+
+                )
 
             st.markdown(
                 "### Maintenance Activities"
             )
-
 
             for task in block["tasks"]:
 
@@ -1776,8 +1882,6 @@ def show_schedule():
                     f"{task['duration_minutes']} min"
 
                 )
-
-
 # ============================================================
 # FULL PLAN DISPLAY
 # Weekly / Monthly Plan A
