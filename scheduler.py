@@ -1022,18 +1022,48 @@ def blocks_overlap(
 
 
 def assign_blocks_to_days(
-
     schedule,
     horizon_days
 ):
 
     """
-    Distributes generated maintenance blocks
-    across the selected planning horizon.
+    Distributes maintenance blocks across the planning horizon.
 
-    Higher priority blocks are assigned first.
+    Assignment priority:
+
+    1. Schedule blocks according to task due dates.
+    2. High-priority blocks are scheduled earlier.
+    3. Blocks are moved to the next available day
+       if conflicts occur.
     """
 
+    start_date = date.today()
+
+    end_date = (
+        start_date +
+        timedelta(days=horizon_days - 1)
+    )
+
+    # --------------------------------------------------------
+    # Create empty daily schedules
+    # --------------------------------------------------------
+
+    daily_blocks = {}
+
+    for day_offset in range(horizon_days):
+
+        plan_date = (
+            start_date +
+            timedelta(days=day_offset)
+        )
+
+        daily_blocks[
+            plan_date.isoformat()
+        ] = []
+
+    # --------------------------------------------------------
+    # Sort blocks
+    # --------------------------------------------------------
 
     sorted_schedule = sorted(
 
@@ -1041,61 +1071,135 @@ def assign_blocks_to_days(
 
         key=lambda block: (
 
-            max(
-
+            -max(
                 task["priority"]
-
                 for task in block["tasks"]
             ),
 
             block["score"]
-        ),
-
-        reverse=True
+        )
     )
-
-
-    start_date = date.today()
-
-
-    daily_blocks = {}
-
-
-    for day_offset in range(horizon_days):
-
-        plan_date = (
-
-            start_date +
-
-            timedelta(days=day_offset)
-
-        ).isoformat()
-
-
-        daily_blocks[plan_date] = []
-
 
     final_plan = []
 
+
+    # --------------------------------------------------------
+    # Assign blocks to dates
+    # --------------------------------------------------------
 
     for block in sorted_schedule:
 
         assigned = False
 
 
-        for day_offset in range(horizon_days):
+        # ----------------------------------------------------
+        # Determine preferred date
+        # ----------------------------------------------------
+
+        due_dates = []
+
+        for task in block["tasks"]:
+
+            due_date = task.get(
+                "due_date"
+            )
+
+            if due_date:
+
+                try:
+
+                    parsed_date = datetime.strptime(
+
+                        str(due_date),
+
+                        "%Y-%m-%d"
+
+                    ).date()
+
+                    due_dates.append(
+                        parsed_date
+                    )
+
+                except ValueError:
+
+                    pass
+
+
+        # Default scheduling date is today
+
+        preferred_date = start_date
+
+
+        if due_dates:
+
+            # Use earliest due date in the block
+
+            preferred_date = min(
+                due_dates
+            )
+
+
+        # ----------------------------------------------------
+        # Keep preferred date inside horizon
+        # ----------------------------------------------------
+
+        if preferred_date < start_date:
+
+            preferred_date = start_date
+
+
+        if preferred_date > end_date:
+
+            preferred_date = end_date
+
+
+        # ----------------------------------------------------
+        # Try preferred date and following dates
+        # ----------------------------------------------------
+
+        days_to_try = []
+
+        current_date = preferred_date
+
+
+        while current_date <= end_date:
+
+            days_to_try.append(
+                current_date
+            )
+
+            current_date += timedelta(
+                days=1
+            )
+
+
+        # If necessary, try earlier dates too
+
+        current_date = start_date
+
+
+        while current_date < preferred_date:
+
+            days_to_try.append(
+                current_date
+            )
+
+            current_date += timedelta(
+                days=1
+            )
+
+
+        # ----------------------------------------------------
+        # Find available date
+        # ----------------------------------------------------
+
+        for candidate_date in days_to_try:
 
             plan_date = (
-
-                start_date +
-
-                timedelta(days=day_offset)
-
-            ).isoformat()
-
+                candidate_date.isoformat()
+            )
 
             existing_blocks = (
-
                 daily_blocks[plan_date]
             )
 
@@ -1118,7 +1222,9 @@ def assign_blocks_to_days(
 
             if not conflict_found:
 
-                new_block = copy.deepcopy(block)
+                new_block = copy.deepcopy(
+                    block
+                )
 
 
                 new_block["plan_date"] = (
@@ -1128,7 +1234,8 @@ def assign_blocks_to_days(
 
                 new_block["block_id"] = (
 
-                    f"BLK-{len(final_plan) + 1:03d}"
+                    f"BLK-"
+                    f"{len(final_plan) + 1:03d}"
                 )
 
 
@@ -1137,14 +1244,14 @@ def assign_blocks_to_days(
                 )
 
 
-                daily_blocks[plan_date].append(
-
+                daily_blocks[
+                    plan_date
+                ].append(
                     new_block
                 )
 
 
                 final_plan.append(
-
                     new_block
                 )
 
@@ -1154,11 +1261,15 @@ def assign_blocks_to_days(
                 break
 
 
-        # If no available day exists.
+        # ----------------------------------------------------
+        # No available date
+        # ----------------------------------------------------
 
         if not assigned:
 
-            new_block = copy.deepcopy(block)
+            new_block = copy.deepcopy(
+                block
+            )
 
 
             new_block["plan_date"] = (
@@ -1168,7 +1279,8 @@ def assign_blocks_to_days(
 
             new_block["block_id"] = (
 
-                f"BLK-{len(final_plan) + 1:03d}"
+                f"BLK-"
+                f"{len(final_plan) + 1:03d}"
             )
 
 
@@ -1178,13 +1290,11 @@ def assign_blocks_to_days(
 
 
             final_plan.append(
-
                 new_block
             )
 
 
     return final_plan
-
 def add_plan_metadata(plan):
 
     """
