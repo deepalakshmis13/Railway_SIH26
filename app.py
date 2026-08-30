@@ -1954,37 +1954,21 @@ def display_full_plan(
                 )
 
 
-            st.write(
+           st.write(
     f"**Departments:** {', '.join(block.get('departments', []))}"
-)
+    )
 
+           st.write(
+    f"**Tasks:** {block.get('task_count', len(block['tasks']))}"
+    )
 
-            st.write(
-    f"**Something:** {block.get('some_key', '')}"
-)
+           st.write(
+    f"**Total Priority:** {block.get('total_priority', 0)}"
+    )
 
-
-            st.write(
-
-                f"**Total Priority:** "
-
-                f"{block.get("
-
-                f"'total_priority', 0"
-
-                f")}"
-
-            )
-
-
-            st.write(
-
-                f"**Optimization Score:** "
-
-                f"{block['score']:.2f}"
-
-            )
-
+           st.write(
+    f"**Optimization Score:** {block['score']:.2f}"
+    )
 
             # Plan B simulation information
 
