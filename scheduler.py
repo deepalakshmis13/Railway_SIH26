@@ -540,16 +540,464 @@ def reschedule_after_delay(
     new_schedule = generate_schedule()
 
     return new_schedule
+# ============================================================
+# FULL PLAN GENERATION
+# Weekly / Monthly Planning Layer
+# ============================================================
+
+from datetime import date, timedelta
+import copy
+
+
+def get_horizon_days(horizon):
+
+    horizon = horizon.lower()
+
+    if horizon == "weekly":
+        return 7
+
+    elif horizon == "monthly":
+        return 30
+
+    else:
+        raise ValueError(
+            "Horizon must be either 'weekly' or 'monthly'."
+        )
+
+
+def blocks_overlap(block1, block2):
+
+    # Check whether the two blocks overlap geographically.
+    location_overlap = ranges_overlap(
+
+        block1["start_km"],
+        block1["end_km"],
+
+        block2["start_km"],
+        block2["end_km"]
+    )
+
+    # Check whether the two blocks overlap in time.
+    time_overlap = ranges_overlap(
+
+        block1["start_time"],
+        block1["end_time"],
+
+        block2["start_time"],
+        block2["end_time"]
+    )
+
+    return location_overlap and time_overlap
+
+
+def assign_blocks_to_days(schedule, horizon_days):
+
+    """
+    Distributes generated maintenance blocks across
+    the selected planning horizon.
+
+    High-priority blocks are scheduled earlier.
+    """
+
+    sorted_schedule = sorted(
+
+        schedule,
+
+        key=lambda block: (
+            max(
+                task["priority"]
+                for task in block["tasks"]
+            ),
+            block["score"]
+        ),
+
+        reverse=True
+    )
+
+    start_date = date.today()
+
+    daily_blocks = {}
+
+    for day_offset in range(horizon_days):
+
+        plan_date = start_date + timedelta(days=day_offset)
+
+        daily_blocks[plan_date.isoformat()] = []
+
+    final_plan = []
+
+    for block in sorted_schedule:
+
+        assigned = False
+
+        # Try every day in the planning horizon.
+        for day_offset in range(horizon_days):
+
+            plan_date = (
+                start_date +
+                timedelta(days=day_offset)
+            ).isoformat()
+
+            existing_blocks = daily_blocks[plan_date]
+
+            conflict_found = False
+
+            for existing_block in existing_blocks:
+
+                if blocks_overlap(
+                    block,
+                    existing_block
+                ):
+
+                    conflict_found = True
+                    break
+
+            # If no conflicting maintenance block exists,
+            # assign the block to this date.
+            if not conflict_found:
+
+                new_block = copy.deepcopy(block)
+
+                new_block["plan_date"] = plan_date
+
+                new_block["block_id"] = (
+                    f"BLK-{len(final_plan) + 1:03d}"
+                )
+
+                daily_blocks[plan_date].append(
+                    new_block
+                )
+
+                final_plan.append(
+                    new_block
+                )
+
+                assigned = True
+
+                break
+
+        # If the horizon is full, keep the block as unscheduled.
+        if not assigned:
+
+            new_block = copy.deepcopy(block)
+
+            new_block["plan_date"] = "UNSCHEDULED"
+
+            new_block["block_id"] = (
+                f"BLK-{len(final_plan) + 1:03d}"
+            )
+
+            new_block["status"] = "UNSCHEDULED"
+
+            final_plan.append(
+                new_block
+            )
+
+    return final_plan
+
+
+def generate_full_plan(horizon="weekly"):
+
+    """
+    Generates the optimized maintenance Plan A.
+
+    horizon:
+        'weekly'  -> 7 days
+        'monthly' -> 30 days
+    """
+
+    horizon_days = get_horizon_days(
+        horizon
+    )
+
+    # Reuse our existing scheduling engine.
+    base_schedule = generate_schedule()
+
+    if not base_schedule:
+
+        return []
+
+    full_plan = assign_blocks_to_days(
+
+        base_schedule,
+
+        horizon_days
+    )
+
+    # Add metadata to every block.
+    for block in full_plan:
+
+        departments = sorted({
+
+            task["department_name"]
+
+            for task in block["tasks"]
+        })
+
+        block["departments"] = departments
+
+        block["task_count"] = len(
+            block["tasks"]
+        )
+
+        block["total_priority"] = sum(
+
+            task["priority"]
+
+            for task in block["tasks"]
+        )
+
+        block["duration_minutes"] = (
+
+            block["end_time"] -
+            block["start_time"]
+        )
+
+        if "status" not in block:
+
+            block["status"] = "SCHEDULED"
+
+    return full_plan
+
+
+# ============================================================
+# WHAT-IF / PLAN B SIMULATOR
+# ============================================================
+
+def apply_weather_impact(
+    schedule,
+    weather_condition
+):
+
+    """
+    Simulates the effect of bad weather on
+    maintenance block duration.
+
+    This does NOT change the database.
+    """
+
+    weather_condition = (
+        weather_condition or "Normal"
+    )
+
+    weather_impact = {
+
+        "Normal": 1.00,
+
+        "Light Rain": 1.10,
+
+        "Heavy Rain": 1.30,
+
+        "Extreme Weather": 1.60
+
+    }
+
+    multiplier = weather_impact.get(
+
+        weather_condition,
+
+        1.00
+    )
+
+    modified_schedule = []
+
+    for block in schedule:
+
+        new_block = copy.deepcopy(block)
+
+        original_duration = (
+
+            new_block["end_time"] -
+
+            new_block["start_time"]
+        )
+
+        new_duration = int(
+            original_duration * multiplier
+        )
+
+        new_block["end_time"] = (
+
+            new_block["start_time"] +
+
+            new_duration
+        )
+
+        new_block["weather_condition"] = (
+            weather_condition
+        )
+
+        new_block["weather_multiplier"] = (
+            multiplier
+        )
+
+        modified_schedule.append(
+            new_block
+        )
+
+    return modified_schedule
+
+
+def apply_delay_impact(
+    schedule,
+    delay_minutes
+):
+
+    """
+    Creates a simulated Plan B by shifting
+    maintenance blocks when a hypothetical
+    train delay affects operations.
+
+    No database values are changed.
+    """
+
+    modified_schedule = []
+
+    for block in schedule:
+
+        new_block = copy.deepcopy(block)
+
+        # Simple prototype simulation:
+        # delayed operations reduce the available
+        # maintenance window, so affected blocks
+        # are shifted later.
+
+        if delay_minutes > 0:
+
+            new_block["start_time"] += delay_minutes
+
+            new_block["end_time"] += delay_minutes
+
+        new_block["simulated_delay"] = (
+            delay_minutes
+        )
+
+        modified_schedule.append(
+            new_block
+        )
+
+    return modified_schedule
+
+
+def generate_what_if_plan(
+
+    horizon="weekly",
+
+    delay_minutes=0,
+
+    weather_condition="Normal"
+
+):
+
+    """
+    Generates Plan B without modifying
+    the database or the original Plan A.
+    """
+
+    # Generate the original optimized plan.
+    plan_b = generate_full_plan(
+        horizon
+    )
+
+    if not plan_b:
+
+        return []
+
+    # Apply hypothetical weather impact.
+    plan_b = apply_weather_impact(
+
+        plan_b,
+
+        weather_condition
+    )
+
+    # Apply hypothetical delay impact.
+    plan_b = apply_delay_impact(
+
+        plan_b,
+
+        delay_minutes
+    )
+
+    # Recalculate metadata after simulation.
+    for block in plan_b:
+
+        block["duration_minutes"] = (
+
+            block["end_time"] -
+
+            block["start_time"]
+        )
+
+        block["plan_type"] = "PLAN B"
+
+    return plan_b
+
+
+# ============================================================
+# PLAN SUMMARY
+# ============================================================
+
+def get_plan_summary(plan):
+
+    """
+    Returns useful metrics for Plan A / Plan B.
+    """
+
+    if not plan:
+
+        return {
+
+            "total_blocks": 0,
+
+            "total_tasks": 0,
+
+            "total_block_minutes": 0,
+
+            "average_score": 0
+
+        }
+
+    total_blocks = len(plan)
+
+    total_tasks = sum(
+
+        len(block["tasks"])
+
+        for block in plan
+    )
+
+    total_block_minutes = sum(
+
+        block["end_time"] -
+
+        block["start_time"]
+
+        for block in plan
+    )
+
+    average_score = sum(
+
+        block["score"]
+
+        for block in plan
+
+    ) / total_blocks
+
+    return {
+
+        "total_blocks": total_blocks,
+
+        "total_tasks": total_tasks,
+
+        "total_block_minutes": total_block_minutes,
+
+        "average_score": average_score
+
+    }
 
 if __name__ == "__main__":
 
     schedule = generate_schedule()
 
     display_schedule(schedule)
-generate_full_plan("weekly")
-generate_full_plan("monthly")
-
-generate_what_if_plan(
-    delay_minutes=30,
-    weather_condition="Heavy Rain"
-)
