@@ -1960,15 +1960,15 @@ def planner_dashboard():
     st.divider()
 
 
-    tab1, tab2, tab3 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
 
-        [
-            "🤖 Optimized Block Plan",
-            "🚨 Defect Reports",
-            "🚆 Train Status"
-        ]
-
-    )
+    [
+        "🤖 Daily Schedule",
+        "📅 Weekly Plan",
+        "🗓️ Monthly Plan",
+        "🧪 What-If / Plan B",
+        "🚨 Defects & Trains"
+    ])
 
 
     with tab1:
