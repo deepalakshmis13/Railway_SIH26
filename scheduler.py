@@ -51,7 +51,6 @@ def get_tasks():
             t.due_date,
             t.status,
             t.source
-
         FROM tasks t
 
         JOIN departments d
@@ -65,7 +64,11 @@ def get_tasks():
         ORDER BY t.priority DESC
     """)
 
-    tasks = cursor.fetchall()
+    # Convert sqlite3.Row objects to normal dictionaries
+    tasks = [
+        dict(row)
+        for row in cursor.fetchall()
+    ]
 
     connection.close()
 
@@ -93,7 +96,6 @@ def get_trains():
             tr.scheduled_arrival,
             tr.scheduled_departure,
             t.delay_minutes
-
         FROM train_routes tr
 
         JOIN trains t
@@ -102,12 +104,15 @@ def get_trains():
         ORDER BY tr.scheduled_arrival
     """)
 
-    trains = cursor.fetchall()
+    # Convert sqlite3.Row objects to normal dictionaries
+    trains = [
+        dict(row)
+        for row in cursor.fetchall()
+    ]
 
     connection.close()
 
     return trains
-
 
 def get_resources():
 
@@ -127,18 +132,19 @@ def get_resources():
             available_from,
             available_until,
             status
-
         FROM resources
-
         WHERE status = 'AVAILABLE'
     """)
 
-    resources = cursor.fetchall()
+    # Convert sqlite3.Row objects to normal dictionaries
+    resources = [
+        dict(row)
+        for row in cursor.fetchall()
+    ]
 
     connection.close()
 
     return resources
-
 
 # ============================================================
 # LOCATION AND COMPATIBILITY
