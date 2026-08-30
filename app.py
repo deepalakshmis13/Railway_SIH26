@@ -1878,338 +1878,185 @@ def planner_dashboard():
         "Centralized view of maintenance, trains and optimized blocks"
     )
 
-
     tasks = get_tasks()
-
     trains = get_trains()
-
     resources = get_resources()
-
     reports = get_defect_reports()
 
-
-    # --------------------------------------------------------
     # System metrics
-    # --------------------------------------------------------
-
-    critical = sum(
-
-        1
-
-        for task in tasks
-
-        if task["priority"] >= 90
-
-    )
-
-
-    delayed_trains = len({
-
-        train["train_number"]
-
-        for train in trains
-
-        if (train["delay_minutes"] or 0) > 0
-
-    })
-
-
-    col1, col2, col3, col4, col5 = st.columns(5)
-
-
-    with col1:
-
-        st.metric(
-            "Pending Tasks",
-            len(tasks)
-        )
-
-
-    with col2:
-
-        st.metric(
-            "Critical Tasks",
-            critical
-        )
-
-
-    with col3:
-
-        st.metric(
-            "Available Resources",
-            len(resources)
-        )
-
-
-    with col4:
-
-        st.metric(
-            "Delayed Trains",
-            delayed_trains
-        )
-
-
-    with col5:
-
-        st.metric(
-            "Defect Reports",
-            len(reports)
-        )
-
+    ...
 
     st.divider()
 
-
+    # Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
-
-    [
-        "🤖 Daily Schedule",
-        "📅 Weekly Plan",
-        "🗓️ Monthly Plan",
-        "🧪 What-If / Plan B",
-        "🚨 Defects & Trains"
-    ]
-)
-
-
-# --------------------------------------------------------
-# DAILY SCHEDULE
-# --------------------------------------------------------
-
-with tab1:
-
-    show_schedule()
-
-
-# --------------------------------------------------------
-# WEEKLY PLAN
-# --------------------------------------------------------
-
-with tab2:
-
-    st.subheader(
-        "📅 Weekly Maintenance Plan"
-    )
-
-    st.write(
-        "Generate a 7-day optimized maintenance plan."
-    )
-
-    if st.button(
-        "🚀 GENERATE WEEKLY PLAN",
-        use_container_width=True
-    ):
-
-        weekly_plan = generate_full_plan(
-            "weekly"
-        )
-
-        st.session_state[
-            "weekly_plan"
-        ] = weekly_plan
-
-
-    if "weekly_plan" in st.session_state:
-
-        weekly_plan = st.session_state[
-            "weekly_plan"
+        [
+            "🤖 Daily Schedule",
+            "📅 Weekly Plan",
+            "🗓️ Monthly Plan",
+            "🧪 What-If / Plan B",
+            "🚨 Defects & Trains"
         ]
+    )
 
-        display_full_plan(
-            weekly_plan,
-            "Weekly Optimized Plan"
+    # DAILY SCHEDULE
+    with tab1:
+        show_schedule()
+
+    # WEEKLY PLAN
+    with tab2:
+        st.subheader("📅 Weekly Maintenance Plan")
+
+        st.write(
+            "Generate a 7-day optimized maintenance plan."
         )
 
-        csv_data = convert_plan_to_csv(
-            weekly_plan
-        )
-
-        st.download_button(
-
-            label="⬇️ Download Weekly Plan CSV",
-
-            data=csv_data,
-
-            file_name="weekly_maintenance_plan.csv",
-
-            mime="text/csv",
-
+        if st.button(
+            "🚀 GENERATE WEEKLY PLAN",
             use_container_width=True
+        ):
+            weekly_plan = generate_full_plan("weekly")
 
-        )
+            st.session_state["weekly_plan"] = weekly_plan
 
+        if "weekly_plan" in st.session_state:
 
-# --------------------------------------------------------
-# MONTHLY PLAN
-# --------------------------------------------------------
+            weekly_plan = st.session_state["weekly_plan"]
 
-with tab3:
-
-    st.subheader(
-        "🗓️ Monthly Maintenance Plan"
-    )
-
-    st.write(
-        "Generate a 30-day optimized maintenance plan."
-    )
-
-    if st.button(
-        "🚀 GENERATE MONTHLY PLAN",
-        use_container_width=True
-    ):
-
-        monthly_plan = generate_full_plan(
-            "monthly"
-        )
-
-        st.session_state[
-            "monthly_plan"
-        ] = monthly_plan
-
-
-    if "monthly_plan" in st.session_state:
-
-        monthly_plan = st.session_state[
-            "monthly_plan"
-        ]
-
-        display_full_plan(
-            monthly_plan,
-            "Monthly Optimized Plan"
-        )
-
-        csv_data = convert_plan_to_csv(
-            monthly_plan
-        )
-
-        st.download_button(
-
-            label="⬇️ Download Monthly Plan CSV",
-
-            data=csv_data,
-
-            file_name="monthly_maintenance_plan.csv",
-
-            mime="text/csv",
-
-            use_container_width=True
-
-        )
-
-
-# --------------------------------------------------------
-# WHAT-IF / PLAN B
-# --------------------------------------------------------
-
-with tab4:
-
-    st.subheader(
-        "🧪 What-If Simulation / Plan B"
-    )
-
-    st.info(
-        "Simulate train delays and weather conditions "
-        "without changing the original Plan A."
-    )
-
-
-# --------------------------------------------------------
-# DEFECTS & TRAINS
-# --------------------------------------------------------
-
-with tab5:
-
-    st.subheader(
-        "🚨 Defect Reports"
-    )
-
-    if not reports:
-
-        st.success(
-            "No defect reports."
-        )
-
-    else:
-
-        for report in reports:
-
-            with st.container(
-                border=True
-            ):
-
-                st.markdown(
-                    f"### 🚨 Report #{report['report_id']}"
-                )
-
-                st.write(
-                    f"**Type:** "
-                    f"{report['defect_type']}"
-                )
-
-                st.write(
-                    f"**Department:** "
-                    f"{report['department_name']}"
-                )
-
-                st.write(
-                    f"**Location:** "
-                    f"KM {report['location_start_km']} "
-                    f"→ "
-                    f"{report['location_end_km']}"
-                )
-
-                st.write(
-                    f"**Severity:** "
-                    f"{report['severity']}"
-                )
-
-                st.write(
-                    f"**Reported by:** "
-                    f"{report['reported_by']}"
-                )
-
-                st.write(
-                    report["description"]
-                )
-
-
-    st.divider()
-
-
-    st.subheader(
-        "🚆 Train Status"
-    )
-
-    if not trains:
-
-        st.warning(
-            "No train data."
-        )
-
-    else:
-
-        for train in trains:
-
-            delay = (
-                train["delay_minutes"] or 0
+            display_full_plan(
+                weekly_plan,
+                "Weekly Optimized Plan"
             )
 
-            if delay > 0:
+            csv_data = convert_plan_to_csv(weekly_plan)
 
-                status = "🔴 DELAYED"
-
-            else:
-
-                status = "🟢 ON TIME"
-
-            st.write(
-
-                f"**{train['train_number']}** "
-                f"{train['train_name']} — "
-                f"{status} "
-                f"({delay} min)"
-
+            st.download_button(
+                label="⬇️ Download Weekly Plan CSV",
+                data=csv_data,
+                file_name="weekly_maintenance_plan.csv",
+                mime="text/csv",
+                use_container_width=True
             )
+
+
+    # MONTHLY PLAN
+    with tab3:
+        st.subheader("🗓️ Monthly Maintenance Plan")
+
+        st.write(
+            "Generate a 30-day optimized maintenance plan."
+        )
+
+        if st.button(
+            "🚀 GENERATE MONTHLY PLAN",
+            use_container_width=True
+        ):
+            monthly_plan = generate_full_plan("monthly")
+
+            st.session_state["monthly_plan"] = monthly_plan
+
+        if "monthly_plan" in st.session_state:
+
+            monthly_plan = st.session_state["monthly_plan"]
+
+            display_full_plan(
+                monthly_plan,
+                "Monthly Optimized Plan"
+            )
+
+            csv_data = convert_plan_to_csv(monthly_plan)
+
+            st.download_button(
+                label="⬇️ Download Monthly Plan CSV",
+                data=csv_data,
+                file_name="monthly_maintenance_plan.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+
+    # WHAT-IF / PLAN B
+    with tab4:
+
+        st.subheader(
+            "🧪 What-If Simulation / Plan B"
+        )
+
+        st.info(
+            "Simulate train delays and weather conditions "
+            "without changing the original Plan A."
+        )
+
+
+    # DEFECTS & TRAINS
+    with tab5:
+
+        st.subheader("🚨 Defect Reports")
+
+        if not reports:
+
+            st.success("No defect reports.")
+
+        else:
+
+            for report in reports:
+
+                with st.container(border=True):
+
+                    st.markdown(
+                        f"### 🚨 Report #{report['report_id']}"
+                    )
+
+                    st.write(
+                        f"**Type:** {report['defect_type']}"
+                    )
+
+                    st.write(
+                        f"**Department:** "
+                        f"{report['department_name']}"
+                    )
+
+                    st.write(
+                        f"**Location:** "
+                        f"KM {report['location_start_km']} "
+                        f"→ {report['location_end_km']}"
+                    )
+
+                    st.write(
+                        f"**Severity:** {report['severity']}"
+                    )
+
+                    st.write(
+                        f"**Reported by:** "
+                        f"{report['reported_by']}"
+                    )
+
+                    st.write(report["description"])
+
+        st.divider()
+
+        st.subheader("🚆 Train Status")
+
+        if not trains:
+
+            st.warning("No train data.")
+
+        else:
+
+            for train in trains:
+
+                delay = train["delay_minutes"] or 0
+
+                if delay > 0:
+                    status = "🔴 DELAYED"
+                else:
+                    status = "🟢 ON TIME"
+
+                st.write(
+                    f"**{train['train_number']}** "
+                    f"{train['train_name']} — "
+                    f"{status} ({delay} min)"
+                )
 
 # ============================================================
 # MAIN APPLICATION
